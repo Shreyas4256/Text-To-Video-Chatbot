@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions      Session[]
+  conversations Conversation[]
+  generations   VideoGeneration[]
+  usageRecords  UsageRecord[]
+  subscription  Subscription?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New video")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  generations VideoGeneration[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  /// Optional link to a generation this message announces/tracks.
+  generationId   String?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  generation   VideoGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+}
+
+enum GenerationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model VideoGeneration {
+  id             String           @id @default(cuid())
+  userId         String
+  conversationId String?
+  /// The prompt exactly as the user submitted it.
+  prompt         String
+  /// The (optionally LLM-)enhanced prompt actually sent to the provider.
+  enhancedPrompt String?
+  negativePrompt String?
+  status         GenerationStatus @default(QUEUED)
+  videoUrl       String?
+  thumbnailUrl   String?
+  errorMessage   String?
+  /// Client-supplied key making generation creation retry-safe.
+  idempotencyKey String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation    Conversation?       @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  settings        GenerationSettings?
+  providerRequest ProviderRequest?
+  messages        Message[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, status])
+  @@index([status, updatedAt])
+}
+
+model GenerationSettings {
+  id             String  @id @default(cuid())
+  generationId   String  @unique
+  aspectRatio    String  @default("16:9") // 16:9 | 9:16 | 1:1
+  durationSec    Int     @default(5)
+  style          String  @default("cinematic")
+  cameraMovement String  @default("static")
+  motionStrength Int     @default(5) // 1..10
+  quality        String  @default("standard") // draft | standard | high
+  seed           Int?
+
+  generation VideoGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+}
+
+model ProviderRequest {
+  id             String    @id @default(cuid())
+  generationId   String    @unique
+  provider       String // replicate | fal | mock
+  providerJobId  String
+  requestPayload Json
+  lastPolledAt   DateTime?
+  pollCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  generation VideoGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@index([provider, providerJobId])
+}
+
+/// Placeholder for a future credits/billing system.
+model UsageRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  kind        String // e.g. "video_generation"
+  creditsUsed Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+/// Placeholder for a future payments integration.
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  plan             String    @default("free")
+  status           String    @default("active")
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
