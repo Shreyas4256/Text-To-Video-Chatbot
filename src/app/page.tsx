@@ -259,7 +259,7 @@ const FEATURES = [
     icon: "🎬",
     title: "Real video generation",
     description:
-      "Requests go to a real text-to-video provider (Replicate or fal.ai) through a secure backend — with live queued → processing → completed status.",
+      "Run an open-source model fully on your own hardware — or plug in a cloud provider. Live queued → processing → completed status either way.",
   },
   {
     icon: "🎛️",
@@ -281,9 +281,9 @@ const FEATURES = [
   },
   {
     icon: "🧩",
-    title: "Provider-agnostic",
+    title: "Self-hostable",
     description:
-      "A clean adapter layer means you can switch video providers with one environment variable — or add your own.",
+      "A bundled local inference worker runs the model on your machine with zero external AI APIs. Cloud adapters stay optional.",
   },
 ];
 

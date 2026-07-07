@@ -1,0 +1,12 @@
+# FrameFlow local inference worker
+# Python 3.10+ recommended. For GPU, install the CUDA build of torch first:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+torch>=2.2
+diffusers>=0.27
+transformers>=4.38
+accelerate>=0.27
+fastapi>=0.110
+uvicorn>=0.27
+imageio>=2.34
+imageio-ffmpeg>=0.4.9
+opencv-python-headless>=4.9

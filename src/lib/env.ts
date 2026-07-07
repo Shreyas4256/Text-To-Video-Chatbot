@@ -11,7 +11,10 @@ const envSchema = z
     SESSION_SECRET: z
       .string()
       .min(32, "SESSION_SECRET must be at least 32 characters"),
-    VIDEO_PROVIDER: z.enum(["mock", "replicate", "fal"]),
+    VIDEO_PROVIDER: z.enum(["mock", "local", "replicate", "fal"]),
+    LOCAL_WORKER_URL: z.string().url().default("http://127.0.0.1:8001"),
+    LOCAL_WORKER_PUBLIC_URL: z.string().url().optional(),
+    LOCAL_WORKER_TOKEN: z.string().optional(),
     REPLICATE_API_TOKEN: z.string().optional(),
     REPLICATE_VIDEO_MODEL: z.string().default("wan-video/wan-2.2-t2v-fast"),
     FAL_KEY: z.string().optional(),
@@ -27,7 +30,7 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ["VIDEO_PROVIDER"],
         message:
-          "VIDEO_PROVIDER=mock is a development-only mode. Configure a real provider (replicate or fal) for production.",
+          "VIDEO_PROVIDER=mock is a development-only mode. Configure a real provider (local, replicate or fal) for production.",
       });
     }
     if (env.VIDEO_PROVIDER === "replicate" && !env.REPLICATE_API_TOKEN) {

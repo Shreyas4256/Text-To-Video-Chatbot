@@ -148,7 +148,11 @@ export function AccountSettings({
           <div className="flex justify-between">
             <dt className="text-zinc-400">Video provider</dt>
             <dd className="font-medium text-zinc-200">
-              {providerInfo.provider === "mock" ? "Mock (development only)" : providerInfo.provider}
+              {providerInfo.provider === "mock"
+                ? "Mock (development only)"
+                : providerInfo.provider === "local"
+                  ? "Self-hosted local model (no external AI service)"
+                  : providerInfo.provider}
             </dd>
           </div>
           <div className="flex justify-between">

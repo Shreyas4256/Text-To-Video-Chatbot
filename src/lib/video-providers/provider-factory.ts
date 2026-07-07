@@ -2,6 +2,7 @@ import { getEnv } from "@/lib/env";
 import type { VideoProvider } from "./provider-interface";
 import { ReplicateProvider } from "./replicate";
 import { FalProvider } from "./fal";
+import { LocalProvider } from "./local";
 import { MockProvider } from "./mock";
 
 let instance: VideoProvider | null = null;
@@ -15,6 +16,9 @@ export function getVideoProvider(): VideoProvider {
   if (instance) return instance;
   const env = getEnv();
   switch (env.VIDEO_PROVIDER) {
+    case "local":
+      instance = new LocalProvider();
+      break;
     case "replicate":
       instance = new ReplicateProvider();
       break;

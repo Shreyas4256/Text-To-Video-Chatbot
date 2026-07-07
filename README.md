@@ -14,9 +14,13 @@ PostgreSQL**.
 - **Chat-first workflow** — an assistant that parses follow-up instructions
   (aspect ratio, duration, style, camera, motion, location changes) and keeps a
   live generation draft in sync with the settings panel.
-- **Real provider integration** — pluggable adapter layer with implementations
-  for [Replicate](https://replicate.com) and [fal.ai](https://fal.ai), plus a
-  clearly-labeled development-only mock. Production refuses to run in mock mode.
+- **Fully self-hostable generation** — a bundled Python inference worker
+  (`worker/`) runs an open-source text-to-video model on YOUR hardware. After
+  the one-time weight download, generation makes zero external API calls — no
+  cloud AI service, no API key, no per-video cost. Optional cloud adapters
+  ([Replicate](https://replicate.com), [fal.ai](https://fal.ai)) exist behind
+  the same interface, plus a clearly-labeled development-only mock that
+  production refuses to run.
 - **Optional LLM prompt enhancement** — with an `ANTHROPIC_API_KEY`, prompts are
   rewritten by Claude before generation; otherwise a deterministic rule-based
   enhancer is used.
@@ -35,6 +39,9 @@ PostgreSQL**.
 
 ```
 prisma/schema.prisma          Database models + migrations
+worker/
+  main.py                     Self-hosted inference worker (FastAPI + diffusers)
+  requirements.txt            Worker dependencies (torch, diffusers, …)
 src/
   middleware.ts               Cookie gate for /dashboard, /login, /signup
   app/
@@ -56,7 +63,8 @@ src/
     rate-limit.ts             In-memory sliding-window limiter
     video-providers/
       provider-interface.ts   Adapter contract
-      replicate.ts fal.ts     Real providers
+      local.ts                Self-hosted worker provider (recommended)
+      replicate.ts fal.ts     Optional cloud providers
       mock.ts                 Dev-only simulated provider
       provider-factory.ts     Selection via VIDEO_PROVIDER
 ```
@@ -81,7 +89,10 @@ cp .env.example .env
 | --- | --- | --- |
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `SESSION_SECRET` | ✅ | ≥32 chars; hashes session tokens (`openssl rand -hex 32`) |
-| `VIDEO_PROVIDER` | ✅ | `mock` (dev only), `replicate`, or `fal` |
+| `VIDEO_PROVIDER` | ✅ | `local` (self-hosted, recommended), `mock` (dev only), `replicate`, or `fal` |
+| `LOCAL_WORKER_URL` | with `local` | Worker address (default `http://127.0.0.1:8001`) |
+| `LOCAL_WORKER_PUBLIC_URL` | optional | Worker address as seen by the browser (defaults to `LOCAL_WORKER_URL`) |
+| `LOCAL_WORKER_TOKEN` | optional | Shared secret; must match the worker's `WORKER_TOKEN` |
 | `REPLICATE_API_TOKEN` | with `replicate` | Replicate API token |
 | `REPLICATE_VIDEO_MODEL` | optional | Default `wan-video/wan-2.2-t2v-fast` |
 | `FAL_KEY` | with `fal` | fal.ai API key |
@@ -120,7 +131,45 @@ dashboard. Include `[fail]` in a prompt to exercise the failure/retry path.
 **Mock mode is refused in production** — `next start` with
 `VIDEO_PROVIDER=mock` fails env validation by design.
 
-## Connecting a real provider
+## Fully self-hosted mode (no external AI services)
+
+The `worker/` directory contains a small FastAPI service that runs an
+open-source diffusion model (default:
+[`damo-vilab/text-to-video-ms-1.7b`](https://huggingface.co/damo-vilab/text-to-video-ms-1.7b),
+~7 GB, openly licensed) directly on your machine:
+
+```bash
+cd worker
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt      # GPU: install the CUDA torch build first
+uvicorn main:app --host 127.0.0.1 --port 8001
+```
+
+Then in the app's `.env`:
+
+```
+VIDEO_PROVIDER="local"
+LOCAL_WORKER_URL="http://127.0.0.1:8001"
+```
+
+Notes and honest expectations:
+
+- **First run downloads the model weights once** from Hugging Face (an open
+  file host — not an AI API). Everything after that runs offline.
+- **A GPU (8 GB+ VRAM) is strongly recommended.** On CPU a short clip can take
+  many minutes; use `draft` quality and short durations. The worker can also
+  run on any other machine you own (gaming PC, rented GPU box, a free
+  Colab/Kaggle GPU notebook) — point `LOCAL_WORKER_URL` at it and set
+  `WORKER_TOKEN`/`LOCAL_WORKER_TOKEN` if it's network-exposed.
+- **Small open models produce short, low-resolution clips** (~2–8 s, 256–448 px).
+  They will not match paid frontier video models — that's the trade-off for
+  free, private, fully-local generation. Any diffusers text-to-video pipeline
+  can be swapped in via `T2V_MODEL` (e.g. newer open models as they appear).
+- Training a text-to-video model *from scratch* is not something a repo can
+  do — frontier models cost millions of GPU-hours. Self-hosting open weights
+  is the practical way to own your generation pipeline end to end.
+
+## Optional cloud providers
 
 ### Replicate
 
