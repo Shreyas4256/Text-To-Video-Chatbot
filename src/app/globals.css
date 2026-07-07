@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface-950: #08080d;
+  --color-surface-900: #0d0d15;
+  --color-surface-800: #14141f;
+  --color-surface-700: #1c1c2b;
+  --color-surface-600: #262637;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-glow: #22d3ee;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-surface-950);
+  color: #e4e4e7;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle scrollbars that fit the dark theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #34344a transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #34344a;
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Reduced-motion users get no decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #14141f 25%, #1c1c2b 50%, #14141f 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
